@@ -1,0 +1,5 @@
+74.208.200.210
+root/3%!m7rCzS3
+
+the provectus is done running on docker with this url
+http://74.208.200.210:8080/
