@@ -46,7 +46,7 @@ public class Consumer {
         properties.put("auto.offset.reset"          , "earliest");
         properties.put("enable.auto.commit"         , "false");
 
-        gson = new GsonBuilder().setPrettyPrinting().create();
+        gson = new GsonBuilder().create();
     }
 
     @Scheduled(fixedRate = 5, timeUnit = TimeUnit.SECONDS)
@@ -82,5 +82,39 @@ public class Consumer {
         }
 
         logger.debug(gson.toJson(messages));
+    }
+
+    public String test(String groupId) {
+        List<Message> messages = new ArrayList<>();
+
+        properties.put("group.id", groupId);
+        consumer = new KafkaConsumer<>(properties);
+
+        try {
+
+            consumer.subscribe(Arrays.asList(topicDev));
+            ConsumerRecords<String, String> records = consumer.poll(Duration.ofMillis(100));
+            for (TopicPartition tp : records.partitions()) {
+                List<ConsumerRecord<String, String>> partRecords = records.records(tp);
+                long lastOffset = 0;
+                for (ConsumerRecord<String, String> record : partRecords) {
+                    lastOffset = record.offset();
+                    try {
+                        Message message = gson.fromJson(record.value(), Message.class);
+                        messages.add(message);
+                    } catch (Throwable t) {
+                        t.printStackTrace();
+                        continue;
+                    }
+                }
+
+                consumer.commitSync(Collections.singletonMap(tp, new OffsetAndMetadata(lastOffset + 1)));
+            }
+        } finally {
+            consumer.close();
+        }
+
+        String json = gson.toJson(messages.get(0));
+        return json;
     }
 }
